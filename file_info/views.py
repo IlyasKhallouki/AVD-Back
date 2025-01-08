@@ -204,3 +204,62 @@ def aggregate_csv_info(request):
             return JsonResponse({'error': str(e)}, status=500)
 
     return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+
+@csrf_exempt
+def column_statistics(request):
+    if request.method == 'POST':
+        try:
+            range_end = request.POST.get('range_end', '').strip()
+            range_end = int(range_end) if range_end else None
+            
+            data = LineColumnRequest(
+                token=request.POST['token'],
+                file_name=request.POST['file_name'],
+                number=int(request.POST['number']),
+                is_column=request.POST['is_column'].lower() == 'true',
+                range_end=range_end
+            )
+            
+            file_path, error = validate_file(data.token, data.file_name)
+            if error:
+                return error
+
+            df = pd.read_csv(file_path)
+
+            # Ensure the request is for a column
+            if not data.is_column:
+                return JsonResponse({'error': 'This endpoint only handles column statistics.'}, status=400)
+
+            if data.number >= len(df.columns):
+                return JsonResponse({'error': 'Invalid column index.'}, status=400)
+
+            column_data = df.iloc[:, data.number]
+
+            # Perform statistical analysis based on column type (numerical or categorical)
+            if column_data.dtype in ['int64', 'float64']:
+                # Numerical column analysis
+                stats = {
+                    "mean": float(column_data.mean()),  # Convert to float
+                    "median": float(column_data.median()),  # Convert to float
+                    "std_dev": float(column_data.std()),  # Convert to float
+                    "min": float(column_data.min()),  # Convert to float
+                    "max": float(column_data.max()),  # Convert to float
+                    "count": int(column_data.count())  # Convert to int
+                }
+            else:
+                # Categorical column analysis
+                stats = {
+                    "unique": int(column_data.nunique()),  # Convert to int
+                    "top": column_data.mode()[0],
+                    "freq": int(column_data.value_counts().iloc[0])  # Convert to int
+                }
+
+            return JsonResponse({f"column_{df.columns[data.number]}_statistics": stats})
+
+        except ValidationError as e:
+            return JsonResponse({'error': e.errors()}, status=400)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
