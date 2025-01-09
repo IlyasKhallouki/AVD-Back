@@ -121,3 +121,75 @@ def remove_file(request):
             return JsonResponse({'error': str(e)}, status=500)
 
     return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+    
+
+@csrf_exempt
+def retreive_files(request):
+    if request.method == 'GET':
+        try:
+            # Validate incoming data
+            token=request.GET['token']
+
+            # Load the user files mapping
+            with open(USER_FILES_PATH, 'r') as user_files_file:
+                user_files = json.load(user_files_file)
+
+                # Check if the token exists and owns the file
+                if token not in user_files:
+                    return JsonResponse({'error': 'User not found'}, status=403)
+                
+            files = []
+                
+            for file in user_files[token]:
+                file_path = os.path.join(UPLOAD_DIR, file)
+                meta_path = f"{file_path}.meta.json"
+                with open(meta_path, 'r') as meta_file:
+                    meta_data = json.load(meta_file)
+                    meta_data['random_name'] = file
+                
+                files.append(meta_data)
+            return JsonResponse({'files': files})
+
+        except KeyError:
+            return JsonResponse({'error': 'Missing token'}, status=400)
+        except ValidationError as e:
+            return JsonResponse({'error': e.errors()}, status=400)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+
+@csrf_exempt
+def get_file_info(request):
+    if request.method == 'GET':
+        try:
+            # Validate incoming data
+            token=request.GET['token']
+            file_name=request.GET['file_name']
+
+            # Load the user files mapping
+            with open(USER_FILES_PATH, 'r') as user_files_file:
+                user_files = json.load(user_files_file)
+
+                # Check if the token exists and owns the file
+                if token not in user_files or file_name not in user_files[token]:
+                    return JsonResponse({'error': 'File not found or unauthorized access'}, status=403)
+                
+            file_path = os.path.join(UPLOAD_DIR, file_name)
+            meta_path = f"{file_path}.meta.json"
+            with open(meta_path, 'r') as meta_file:
+                meta_data = json.load(meta_file)
+                meta_data['random_name'] = file_name
+
+            return JsonResponse({'file_info': meta_data})
+
+        except KeyError:
+            return JsonResponse({'error': 'Missing token or file_name'}, status=400)
+        except ValidationError as e:    
+            return JsonResponse({'error': e.errors()}, status=400)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
