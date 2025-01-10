@@ -39,7 +39,7 @@ def validate_file(token, file_name):
 
     return file_path, None
 
-
+# '/visualize' endpoint
 # Function to generate a plot and return it as base64 image
 def generate_plot(df, plot_type, column_x=None, column_y=None, column_z=None, filter_data=None):
     if filter_data:

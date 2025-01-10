@@ -74,7 +74,7 @@ def head_csv(request):
                 return error
 
             df = pd.read_csv(file_path)
-            return JsonResponse(df.head(5).to_dict(orient='records'))
+            return JsonResponse(df.head(5).to_dict(orient='records'), safe=False)
         except ValidationError as e:
             return JsonResponse({'error': e.errors()}, status=400)
         except Exception as e:
